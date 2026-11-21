@@ -328,17 +328,25 @@ export default function App() {
     a.click();
     URL.revokeObjectURL(url);
   };
-  const buildCustom = () => {
+  const buildCustom = async () => {
     if (!db) return;
     try {
-      db.run("DROP TABLE IF EXISTS appointments; DROP TABLE IF EXISTS clinics");
-      seedCustom(db, ddl, rows);
-      refreshSchema(db);
-      snap(db, "Built custom schema");
+      const next = await createDatabase();
+      seedCustom(next, ddl, rows);
+      db.close();
+      setDb(next);
+      refreshSchema(next);
+      const firstTable = getSchema(next)[0];
+      const firstQuery = firstTable
+        ? `SELECT * FROM "${firstTable.name.replaceAll('"', '""')}" LIMIT 25;`
+        : "SELECT 1 AS ready;";
+      setHistory([{ label: "Custom schema seed", file: next.export() }]);
+      setHistoryIndex(0);
+      setBenchmark(null);
+      setQuery(null);
+      setNodes([]);
       setModal(false);
-      setSql(
-        "SELECT city, COUNT(*) AS clinics, ROUND(AVG(rating), 1) AS avg_rating\nFROM clinics\nGROUP BY city\nORDER BY clinics DESC;",
-      );
+      setSql(firstQuery);
       setNotice("Schema built and seeded");
       setTimeout(() => setNotice(""), 2500);
     } catch (e) {
