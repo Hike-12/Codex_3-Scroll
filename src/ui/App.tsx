@@ -105,10 +105,14 @@ export default function App() {
     ),
     [rows, setRows] = useState(1000),
     [notice, setNotice] = useState(""),
+    [selectedStep, setSelectedStep] = useState(0),
     [benchmark, setBenchmark] = useState<{
       index: string;
       before: number;
       after: number;
+      beforePages: number;
+      afterPages: number;
+      query: string;
     } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const editorRef = useRef<HTMLTextAreaElement>(null);
@@ -200,6 +204,7 @@ export default function App() {
         const result = runQuery(db, text);
         setQuery(result);
         setNodes(analyzePlan(result.plan, tableCounts));
+        setSelectedStep(0);
         setSql(text);
         refreshSchema(db);
         if (!/^\s*(select|with|explain)\b/i.test(text)) {
@@ -232,6 +237,9 @@ export default function App() {
         index: suggested.match(/INDEX\s+(\w+)/i)?.[1] ?? "index",
         before,
         after: after.time,
+        beforePages: nodes.some((node) => node.severity === "slow") ? 100 : 3,
+        afterPages: after.plan.some((step) => /USING .*INDEX/i.test(step.detail)) ? 3 : 100,
+        query: sql,
       });
       setNotice(
         `Index applied · ${before.toFixed(2)} ms → ${after.time.toFixed(2)} ms`,
@@ -278,6 +286,7 @@ export default function App() {
     setHistoryIndex(0);
     setQuery(runQuery(next, first.sql));
     setNodes(analyzePlan(runQuery(next, first.sql).plan));
+    setSelectedStep(0);
     setNotice(`${name} dataset ready`);
     setTimeout(() => setNotice(""), 2400);
   };
@@ -360,6 +369,15 @@ export default function App() {
       run();
     }
   };
+  const focusedStep = nodes[selectedStep] ?? nodes[0];
+  const planTableName = focusedStep?.detail.match(/\b(?:SCAN|SEARCH)\s+["`\[]?([\w]+)/i)?.[1];
+  const activeTable =
+    schema.find((table) => table.name.toLowerCase() === planTableName?.toLowerCase()) ??
+    schema.find((table) => new RegExp("\\b(?:FROM|JOIN)\\s+" + table.name + "\\b", "i").test(sql)) ??
+    schema[0];
+  const totalRows = schema.reduce((sum, table) => sum + table.count, 0);
+  const totalPages = Number(db?.exec("PRAGMA page_count")[0]?.values[0]?.[0] ?? 100);
+  const pageModel = Math.max(1, Math.round(totalPages * ((activeTable?.count ?? 0) / Math.max(totalRows, 1))));
   return (
     <div className="app-shell">
       <header className="topbar">
@@ -368,9 +386,9 @@ export default function App() {
             <Activity size={17} />
           </span>
           <span>
-            sql<span className="brand-light">xray</span>
+            sql<span className="brand-light">-xray</span>
           </span>
-          <span className="version">STUDIO</span>
+          <span className="live-indicator" title="SQLite engine ready" />
         </div>
         <div className="top-divider" />
         <div className="dataset-wrap">
@@ -419,6 +437,9 @@ export default function App() {
           )}
         </div>
         <div className="top-actions">
+          <button className="quiet-btn custom-trigger" onClick={() => setModal(true)}>
+            <Plus size={14} /><span>Custom schema</span>
+          </button>
           <button
             className="quiet-btn"
             onClick={() => fileRef.current?.click()}
@@ -445,7 +466,6 @@ export default function App() {
           >
             <RefreshCw size={15} />
           </button>
-          <button className="avatar">A</button>
         </div>
       </header>
       <main className="workspace">
@@ -529,21 +549,7 @@ export default function App() {
           </div>
         </aside>
         <section className="main-area">
-          <div className="page-heading">
-            <div>
-              <div className="breadcrumb">
-                Workspace <ChevronRight size={13} /> Query lab
-              </div>
-              <h1>
-                Query lab <span className="heading-dot">.</span>
-              </h1>
-              <p>See what happens under the hood when your SQL runs.</p>
-            </div>
-            <div className="heading-status">
-              <span className={`status-dot ${ready ? "" : "loading"}`} />
-              {ready ? "Database ready" : "Starting engine"}
-            </div>
-          </div>
+          <div className="studio-status"><span className="section-index">TRACE / 01</span><strong>Database execution trace</strong><span className="status-dot" />{ready ? "ENGINE ONLINE" : "INITIALIZING"}</div>
           <div className="upper-grid">
             <section className="panel editor-panel">
               <div className="panel-top">
@@ -630,104 +636,16 @@ export default function App() {
               </div>
               {tab === "plan" ? (
                 <div className="plan-content">
-                  {error ? (
-                    <div className="error-state">
-                      <TriangleAlert size={18} />
-                      <div>
-                        <strong>Query couldn't run</strong>
-                        <span>{error}</span>
-                      </div>
-                    </div>
-                  ) : nodes.length ? (
-                    <>
-                      <div className="plan-flow">
-                        {nodes.map((n, i) => (
-                          <div className="plan-step-wrap" key={`${n.id}-${i}`}>
-                            <div className={`plan-step ${n.severity}`}>
-                              <span className="step-status">
-                                {n.severity === "fast" ? (
-                                  <Check size={13} />
-                                ) : n.severity === "warning" ? (
-                                  <TriangleAlert size={13} />
-                                ) : (
-                                  <Search size={13} />
-                                )}
-                              </span>
-                              <div className="step-copy">
-                                <strong>{n.title}</strong>
-                                <code>{n.detail}</code>
-                              </div>
-                              <span className="complexity">{n.complexity}</span>
-                            </div>
-                            {i < nodes.length - 1 && (
-                              <div className="flow-line" />
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                      <div className="plan-caption">
-                        <span className="caption-line" />
-                        SQLite execution plan
-                        <span className="caption-query">
-                          {nodes.length} step{nodes.length === 1 ? "" : "s"}
-                        </span>
-                      </div>
-                    </>
-                  ) : (
-                    <div className="empty-plan">
-                      <div className="empty-icon">
-                        <Activity size={19} />
-                      </div>
-                      <strong>Ready when you are</strong>
-                      <span>Run a query to see its execution path.</span>
-                      <button onClick={() => run()}>
-                        Run current query <Play size={12} />
-                      </button>
-                    </div>
-                  )}
-                  {suggested && !error && (
-                    <div className="advisor">
-                      <div className="advisor-icon">
-                        <Lightbulb size={15} />
-                      </div>
-                      <div className="advisor-copy">
-                        <strong>A small index could help</strong>
-                        <span>
-                          Speed up this query with{" "}
-                          <code>
-                            {suggested.match(/ ON (\w+)/)?.[1]}.
-                            {suggested.match(/\((.*?)\)/)?.[1]}
-                          </code>
-                        </span>
-                      </div>
-                      <button className="apply-btn" onClick={applyIndex}>
-                        Add index <ArrowDownToLine size={13} />
-                      </button>
-                    </div>
-                  )}
-                  {benchmark && (
-                    <div className="benchmark-card">
-                      <span className="benchmark-check">
-                        <Check size={13} />
-                      </span>
-                      <div>
-                        <strong>{benchmark.index} created</strong>
-                        <span>
-                          {benchmark.before.toFixed(2)} ms before ·{" "}
-                          {benchmark.after.toFixed(2)} ms after
-                        </span>
-                      </div>
-                      <b>
-                        {(
-                          benchmark.before / Math.max(benchmark.after, 0.01)
-                        ).toFixed(1)}
-                        × faster
-                      </b>
-                    </div>
-                  )}
+                  {error ? <div className="error-state"><TriangleAlert size={16} /><div><strong>QUERY INTERRUPTED</strong><span>{error}</span></div></div> : nodes.length ? <>
+                    <PlanPipeline nodes={nodes} selected={selectedStep} onSelect={setSelectedStep} />
+                    {focusedStep && <div className={"root-cause " + focusedStep.severity}><span className="cause-marker"><Activity size={13} /></span><div><div className="cause-label">ROOT CAUSE <span>· STEP {String(selectedStep + 1).padStart(2, "0")}</span></div><p>{describeStep(focusedStep, activeTable?.count ?? 0, sql)}</p></div><span className="cause-complexity">{focusedStep.complexity}</span></div>}
+                  </> : <div className="empty-plan"><Activity size={18} /><strong>Awaiting execution trace</strong><span>Run SQL to resolve the query path.</span></div>}
+                  <PageHeatmap tableName={activeTable?.name ?? "database"} rowCount={activeTable?.count ?? 0} pageCount={pageModel} step={focusedStep} resultRows={query?.values.length ?? 0} />
+                  {suggested && !error && <div className="index-advisor"><div className="advisor-icon"><Lightbulb size={14} /></div><div className="advisor-sql"><span>INDEX ADVISOR</span><code>{suggested}</code></div><button className="apply-btn" onClick={applyIndex}>⚡ APPLY & BENCHMARK</button></div>}
+                  {benchmark && <div className="delta-hud"><div className="delta-title"><span className="delta-live" />INDEX SIMULATION <span className="delta-index">{benchmark.index}</span></div><div className="delta-metrics"><div><small>BEFORE</small><strong>{benchmark.before.toFixed(2)}<i>ms</i></strong><span>{benchmark.beforePages}% pages read</span></div><div className="delta-arrow">→</div><div><small>AFTER</small><strong className="emerald-text">{benchmark.after.toFixed(2)}<i>ms</i></strong><span>{(benchmark.afterPages / Math.max(pageModel, 1) * 100).toFixed(1)}% pages read</span></div><b className="speedup">{(benchmark.before / Math.max(benchmark.after, 0.01)).toFixed(1)}×<small>SPEEDUP</small></b></div></div>}
                 </div>
               ) : (
-                <BtreeView schema={schema} nodes={nodes} />
+                <BtreeView db={db} table={activeTable} nodes={nodes} />
               )}
             </section>
           </div>
@@ -781,7 +699,10 @@ export default function App() {
                     <tr>
                       <th className="row-num">#</th>
                       {query.columns.map((c, i) => (
-                        <th key={`${c}-${i}`}>
+                        <th
+                          key={`${c}-${i}`}
+                          className={query.values.some((row) => typeof row[i] === "number") ? "numeric" : ""}
+                        >
                           {c}
                           <span className="column-type">
                             {typeof query.values.find((r) => r[i] != null)?.[
@@ -1001,82 +922,71 @@ export default function App() {
     </div>
   );
 }
-function BtreeView({
-  schema,
-  nodes,
-}: {
-  schema: ReturnType<typeof getSchema>;
-  nodes: PlanNode[];
-}) {
-  const table = schema.find((t) => /orders/i.test(t.name)) ?? schema[0];
-  const indexed = nodes.some((n) => /INDEX/i.test(n.detail));
-  return (
-    <div className="btree-content">
-      <div className="btree-head">
-        <div>
-          <div className="btree-eyebrow">PAGE WALKTHROUGH</div>
-          <strong>
-            {table?.name ?? "Your table"}{" "}
-            <span>· {table?.count.toLocaleString() ?? 0} rows</span>
-          </strong>
-        </div>
-        <span className={`btree-badge ${indexed ? "fast" : ""}`}>
-          {indexed ? "INDEX SEEK" : "TABLE SCAN"}
-        </span>
-      </div>
-      <div className="tree-diagram">
-        <div className="tree-level root-level">
-          <span className="page-node root-node">
-            <span>ROOT</span>
-            <b>{indexed ? "Page 1" : "Table root"}</b>
-          </span>
-        </div>
-        <div className="tree-connect">
-          <i />
-          <i />
-          <i />
-        </div>
-        <div className="tree-level">
-          <span className="page-node branch-node">
-            <span>BRANCH</span>
-            <b>Page 8</b>
-          </span>
-          <span className="page-node branch-node muted-node">
-            <span>BRANCH</span>
-            <b>Page 12</b>
-          </span>
-        </div>
-        <div className="tree-connect leaf-connect">
-          <i />
-          <i />
-          <i />
-          <i />
-        </div>
-        <div className="tree-level">
-          <span className="page-node leaf-node">
-            <span>LEAF</span>
-            <b>Page 9</b>
-          </span>
-          <span className="page-node leaf-node active-leaf">
-            <span>LEAF · MATCH</span>
-            <b>Page 10</b>
-          </span>
-          <span className="page-node leaf-node">
-            <span>LEAF</span>
-            <b>Page 11</b>
-          </span>
-        </div>
-      </div>
-      <div className="btree-foot">
-        <span>
-          <span className="btree-legend-dot" />
-          B-tree traversal
-        </span>
-        <strong>{indexed ? "~3 page reads" : "Sequential page scan"}</strong>
-        <span className="btree-complexity">
-          {indexed ? "O(log N)" : "O(N)"}
-        </span>
-      </div>
-    </div>
-  );
+function PlanPipeline({ nodes, selected, onSelect }: { nodes: PlanNode[]; selected: number; onSelect: (index: number) => void }) {
+  const cardW = 146, gap = 42, startX = 22, y = 40;
+  const output = { id: -1, parent: -1, detail: "SELECT projection", severity: "fast" as const, complexity: "OUTPUT", title: "Result projection", explanation: "SQLite returns the requested columns." };
+  const display = nodes.concat(output);
+  const width = Math.max(560, startX * 2 + display.length * cardW + Math.max(0, display.length - 1) * gap + 20);
+  return <div className="pipeline-wrap">
+    <div className="pipeline-meta"><span>EXECUTION GRAPH</span><span>{nodes.length} PLAN NODES <i /> {nodes.filter((node) => node.severity === "slow").length} SCANS</span></div>
+    <div className="pipeline-scroll"><svg className="pipeline-svg" width={width} height="164" viewBox={"0 0 " + width + " 164"} role="group" aria-label="Animated SQLite execution plan">
+      <defs><filter id="packet-glow"><feGaussianBlur stdDeviation="3" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter></defs>
+      {display.map((node, i) => {
+        const x = startX + i * (cardW + gap), isOutput = node.id === -1, active = !isOutput && selected === i, tone = isOutput ? "fast" : node.severity;
+        return <g key={isOutput ? "projection" : node.id + "-" + i} className={"pipeline-node " + tone + (active ? " selected" : "")} role="button" tabIndex={0} aria-label={node.title} onClick={() => !isOutput && onSelect(i)} onKeyDown={(event) => { if (!isOutput && (event.key === "Enter" || event.key === " ")) onSelect(i); }}>
+          {i > 0 && <><path className={"pipeline-edge " + tone} d={"M" + (x - gap) + " 83 L" + x + " 83"} /><circle r="3" className={"data-packet " + tone} filter="url(#packet-glow)"><animateMotion dur={tone === "slow" ? "3.4s" : tone === "warning" ? "1.8s" : "0.85s"} repeatCount="indefinite" path={"M" + (x - gap) + " 83 L" + x + " 83"} /></circle></>}
+          <rect className="node-shell" x={x} y={y} width={cardW} height="76" rx="6" />
+          <text className="node-index" x={x + 11} y={y + 15}>{isOutput ? "OUT" : "STEP " + String(i + 1).padStart(2, "0")}</text>
+          <text className="node-severity" x={x + cardW - 11} y={y + 15} textAnchor="end">{isOutput ? "READY" : tone === "fast" ? "SEEK" : tone === "warning" ? "SORT" : "SCAN"}</text>
+          <text className="node-title" x={x + 11} y={y + 38}>{node.title.length > 20 ? node.title.slice(0, 18) + "…" : node.title}</text>
+          <text className="node-detail" x={x + 11} y={y + 57}>{node.detail.length > 22 ? node.detail.slice(0, 20) + "…" : node.detail}</text>
+          <text className="node-complexity" x={x + 11} y={y + 91}>{node.complexity}</text>
+        </g>;
+      })}
+      <text className="graph-axis" x={startX} y="150">TABLE / INDEX SOURCE</text><text className="graph-axis" x={width - startX} y="150" textAnchor="end">RESULT BUFFER</text>
+    </svg></div>
+  </div>;
+}
+function describeStep(node: PlanNode, rowCount: number, sql: string) {
+  const scan = node.detail.match(/\bSCAN\s+["']?([\w]+)/i);
+  if (node.severity === "slow" && scan) {
+    const where = sql.match(/\bWHERE\b\s+(?:[\w]+\.)?([\w]+)/i)?.[1];
+    return "Sequential scan: SQLite read all " + rowCount.toLocaleString() + " rows in " + scan[1] + (where ? " because “" + where + "” has no matching B-tree index." : " from start to finish because no matching B-tree index is available.");
+  }
+  return node.explanation;
+}
+function PageHeatmap({ tableName, rowCount, pageCount, step, resultRows }: { tableName: string; rowCount: number; pageCount: number; step?: PlanNode; resultRows: number }) {
+  const scan = step?.severity === "slow", sort = step?.severity === "warning", lit = scan ? 100 : sort ? 52 : step ? 3 : 0;
+  return <div className={"page-heatmap " + (scan ? "scan" : sort ? "sort" : "seek")}>
+    <div className="heatmap-head"><div><span className="heatmap-kicker">STORAGE PAGE MAP</span><strong>{tableName}<small> · {pageCount.toLocaleString()} est. pages</small></strong></div><span className="heatmap-state">{scan ? "FULL SCAN" : sort ? "TEMP SORT" : step ? "INDEX SEEK" : "IDLE"}</span></div>
+    <div className="heatmap-grid" role="img" aria-label={scan ? "Full table scan reads all 100 mapped blocks" : "Index seek reads a sparse set of mapped blocks"}>{Array.from({ length: 100 }, (_, i) => <i key={i} className={i < lit ? "lit" : ""} style={{ animationDelay: (i * (scan ? 11 : 22)) + "ms" }} />)}</div>
+    <div className="heatmap-foot"><span>{scan ? rowCount.toLocaleString() + " / " + rowCount.toLocaleString() + " rows inspected" : sort ? Math.round(rowCount * 0.45).toLocaleString() + " rows staged for sort" : step ? "3 page hops · root → leaf → rowid · " + resultRows.toLocaleString() + " matched rows" : "Execute a query to map page activity"}</span><strong>{step ? scan ? "100%" : sort ? "52%" : Math.max(0.1, (3 / Math.max(pageCount, 1)) * 100).toFixed(1) + "%" : "—"}<small> OF PAGES</small></strong></div>
+  </div>;
+}
+function BtreeView({ db, table, nodes }: { db: SqlDatabase | null; table?: ReturnType<typeof getSchema>[number]; nodes: PlanNode[] }) {
+  const seekNode = nodes.find((node) => /SEARCH/i.test(node.detail));
+  const indexed = Boolean(seekNode && /USING .*INDEX/i.test(seekNode.detail));
+  const lookupColumn = seekNode?.detail.match(/\(([\w]+)\s*[=<>]/)?.[1] ?? table?.columns.find((column) => column.pk)?.name ?? table?.columns[0]?.name ?? "id";
+  const values = useMemo(() => {
+    if (!db || !table) return [] as unknown[];
+    try { const safeTable = table.name.replaceAll('"', '""'), safeColumn = lookupColumn.replaceAll('"', '""'); return db.exec('SELECT DISTINCT "' + safeColumn + '" FROM "' + safeTable + '" WHERE "' + safeColumn + '" IS NOT NULL ORDER BY "' + safeColumn + '" LIMIT 8')[0]?.values.map((row) => row[0]) ?? []; } catch { return []; }
+  }, [db, table?.name, lookupColumn]);
+  const [lookup, setLookup] = useState<unknown>(null);
+  useEffect(() => setLookup(values[0] ?? null), [table?.name, lookupColumn, values.length]);
+  const chosen = values.findIndex((value) => String(value) === String(lookup)), split = Math.ceil(values.length / 2);
+  const pageNode = (x: number, y: number, label: string, value: string, active: boolean, key?: unknown) => <g className={"btree-page " + (active ? "active" : "") + (key !== undefined ? " clickable" : "")} role={key !== undefined ? "button" : undefined} tabIndex={key !== undefined ? 0 : undefined} onClick={() => key !== undefined && setLookup(key)} onKeyDown={(event) => { if (key !== undefined && event.key === "Enter") setLookup(key); }}><rect x={x - 55} y={y} width="110" height="39" rx="5" /><text x={x} y={y + 14} textAnchor="middle" className="btree-tier">{label}</text><text x={x} y={y + 29} textAnchor="middle" className="btree-key">{value}</text></g>;
+  const rootX = 400, leftX = 245, rightX = 555, leafX = [95, 295, 505, 705], leafY = 158, branchY = 88;
+  return <div className="btree-content">
+    <div className="btree-toolbar"><div><span className="heatmap-kicker">B-TREE PAGE WALK</span><strong>{table?.name ?? "No table"}<small> / {lookupColumn}</small></strong></div><span className={"btree-badge " + (indexed ? "fast" : "slow")}>{indexed ? "INDEX SEEK" : "ROWID WALK"}</span></div>
+    <div className="key-selector"><span>LOOKUP KEY</span>{values.slice(0, 6).map((value, i) => <button key={i} className={String(lookup) === String(value) ? "selected" : ""} onClick={() => setLookup(value)}>{String(value)}</button>)}</div>
+    <div className="tree-canvas"><svg viewBox="0 0 800 218" role="group" aria-label="Interactive B-tree lookup path"><defs><filter id="tree-glow"><feGaussianBlur stdDeviation="4" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter></defs>
+      <path className={"tree-edge " + (chosen >= 0 ? "active" : "")} d={"M" + rootX + " 59 L" + leftX + " " + branchY} /><path className={"tree-edge " + (chosen >= split ? "active" : "")} d={"M" + rootX + " 59 L" + rightX + " " + branchY} />
+      {leafX.map((x, i) => { const branch = i < 2 ? leftX : rightX, size = Math.max(1, Math.ceil(values.length / 4)), active = chosen >= 0 && Math.floor(chosen / size) === i, traversed = chosen >= 0 && (i < 2 ? chosen < split : chosen >= split); return <path key={i} className={"tree-edge " + (active || traversed ? "active" : "")} d={"M" + branch + " " + (branchY + 39) + " L" + x + " " + leafY} />; })}
+      {pageNode(rootX, 19, "ROOT PAGE · 01", lookup === null ? "Choose a key" : String(lookup), chosen >= 0)}
+      {pageNode(leftX, branchY, "BRANCH PAGE · 08", values.length ? String(values[0]) + " — " + String(values[Math.max(0, split - 1)]) : "No values", chosen >= 0 && chosen < split)}
+      {pageNode(rightX, branchY, "BRANCH PAGE · 12", values[split] === undefined ? "High key range" : String(values[split]) + " — " + String(values[values.length - 1]), chosen >= split)}
+      {leafX.map((x, i) => { const size = Math.max(1, Math.ceil(values.length / 4)), index = Math.min(i * size, Math.max(0, values.length - 1)), value = values[index]; return pageNode(x, leafY, "LEAF RANGE · " + (i + 1), value === undefined ? "Empty page" : String(value), chosen >= 0 && Math.floor(chosen / size) === i, value); })}
+    </svg></div>
+    <div className="btree-foot"><span><i className="btree-legend-dot" />{indexed ? "Root → branch → selected leaf" : "Sequential rowid traversal"}</span><strong>{indexed ? "3 page hops" : (table?.count ?? 0).toLocaleString() + " rows scanned"}</strong><span className={"btree-complexity " + (indexed ? "fast" : "slow")}>{indexed ? "O(log N)" : "O(N)"}</span></div>
+  </div>;
 }
