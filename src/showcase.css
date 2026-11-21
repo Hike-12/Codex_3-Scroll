@@ -43,7 +43,7 @@
   top: 50%;
   left: 8%;
   margin-top: -80px;
-  width: min(48%, 650px);
+  width: min(40%, 560px);
   text-shadow: 0 2px 22px #0007;
 }
 .story-copy span {
@@ -54,7 +54,7 @@
   letter-spacing: 0.13em;
 }
 .story-copy h1 {
-  font-size: clamp(28px, 6.8vw, 108px);
+  font-size: clamp(28px, 5.8vw, 92px);
   line-height: 0.95;
   letter-spacing: -0.07em;
   margin: 0.22em 0 0.24em;
