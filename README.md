@@ -28,3 +28,7 @@ The palette includes structural blocks, powders, fluids, gases, and energy cells
 npm test
 npm run build
 ```
+
+## Deployment
+
+The `main` branch is connected to Vercel. Pushes to `main` create production deployments; other branches create previews.
