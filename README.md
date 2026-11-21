@@ -1,6 +1,6 @@
-# voxel-melt
+# Scroll Forge
 
-A browser based pixel physics sandbox built with React, TypeScript, Vite, and a typed-array cellular automata engine. The 360 × 220 simulation runs locally in the browser and renders straight to a pixel canvas.
+Scroll Forge turns a video or the built-in Precision Core demo into a scroll-driven landing page. Video decoding, editing, and exports happen in the browser.
 
 ## Run locally
 
@@ -9,26 +9,11 @@ npm install
 npm run dev
 ```
 
-## Controls
+Import an MP4, WebM, or MOV with a codec your browser supports. Choose the frame count, maximum resolution, and compression quality. Scrub the timeline to place story beats, use Motion to adjust the scroll response, and open Live Preview to experience the full page. Export a single HTML file or a React + TypeScript component with frames embedded.
 
-- Drag on the stage to paint or use the selected tool.
-- `1`–`9` and `0` select Steel through Water. Click the horizontally scrollable palette for every other material.
-- `Space` pauses or resumes; `E` detonates all planted C4.
-- Choose Circle, Square, or Spray for the brush; adjust size, gravity direction, and wind in the tool dock.
-- Use the scenario menu to load Skyline Tower, Volcanic Island, Acid & Hydro-Dam, or Empty Sandbox.
-- Toggle audio and glow in the top bar.
-
-## Materials and tools
-
-The palette includes structural blocks, powders, fluids, gases, and energy cells. Materials react through the simulation rules: water quenches lava, acid corrodes blocks, fire spreads to fuel, oil floats above pooled water, and explosions fracture terrain. Tools include a vertical cutting laser, C4 charges, a vortex, and continuous material emitters.
-
-## Checks
+Decoded memory grows with resolution and frame count. The import dialog reports an estimate in MB. Lower the width or frame count for devices with less memory.
 
 ```sh
 npm test
 npm run build
 ```
-
-## Deployment
-
-The `main` branch is connected to Vercel. Pushes to `main` create production deployments; other branches create previews.
