@@ -18,6 +18,8 @@
 body {
   margin: 0;
   min-width: 320px;
+  height: 100dvh;
+  overflow: hidden;
 }
 button,
 input,
@@ -146,16 +148,44 @@ select:focus-visible {
   color: #171024;
 }
 .workspace {
+  width: min(100%, 1536px);
   max-width: 1536px;
   margin: auto;
-  padding: 29px 34px 12px;
+  height: calc(100dvh - 72px);
+  padding: clamp(8px, 1.5vh, 17px) 34px 6px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 .work-head {
   display: flex;
   align-items: end;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 19px;
+  margin-bottom: 9px;
+  flex: none;
+}
+.work-head > div:first-child {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.demo-picker {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font: 9px var(--mono);
+  color: var(--muted);
+}
+.demo-picker select {
+  margin: 0;
+  padding: 5px 22px 5px 8px;
+  background: #18151f;
+  border-color: #423755;
+  color: #e8e1fa;
+}
+.path {
+  display: none;
 }
 .work-head h1 {
   margin: 0;
@@ -191,11 +221,16 @@ select:focus-visible {
   grid-template-columns: minmax(0, 1fr) 314px;
   gap: 14px;
   align-items: start;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
 }
 .left-stack {
   display: grid;
   gap: 14px;
   min-width: 0;
+  min-height: 0;
+  align-content: start;
 }
 .panel {
   border: 1px solid var(--line);
@@ -237,7 +272,7 @@ select:focus-visible {
   width: 100%;
   aspect-ratio: 16/9;
   position: relative;
-  max-height: 51vh;
+  max-height: min(42vh, 430px);
 }
 .editor-canvas .story-copy h1 {
   font-size: clamp(21px, 4.4vw, 68px);

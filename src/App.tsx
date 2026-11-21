@@ -17,7 +17,12 @@ import {
 } from "lucide-react";
 import ScrollCanvas from "./components/ScrollCanvas";
 import TimelineEditor from "./components/TimelineEditor";
-import { cloneDemoBeats, generateDemo } from "./engine/demoGenerator";
+import {
+  beatsForDemo,
+  cloneDemoBeats,
+  demoSequences,
+  generateDemo,
+} from "./engine/demoGenerator";
 import {
   dispose,
   extractFrames,
@@ -51,6 +56,7 @@ export default function App() {
   const [tab, setTab] = useState<"story" | "motion">("story");
   const [dialog, setDialog] = useState<"source" | "export" | null>(null);
   const [source, setSource] = useState("Precision Core");
+  const [demoId, setDemoId] = useState("precision");
   const [file, setFile] = useState<File | null>(null);
   const [count, setCount] = useState(120);
   const [width, setWidth] = useState(1280);
@@ -74,7 +80,7 @@ export default function App() {
     setFrames(next);
     if (old !== next) dispose(old);
   }
-  async function loadDemo() {
+  async function loadDemo(id = demoId) {
     task.current?.abort();
     const controller = new AbortController();
     task.current = controller;
@@ -83,30 +89,39 @@ export default function App() {
     setFrame(0);
     setJob({ mode: "demo", done: 0, total: 120, ram: 0 });
     try {
-      const result = await generateDemo(controller.signal, (first, index) => {
-        if (index === 0 && !currentFrames.current.length) {
-          demoPartial.current = true;
-          currentFrames.current = [first];
-          setFrames(currentFrames.current);
-        }
-        if (index % 8 === 0)
-          setJob({
-            mode: "demo",
-            done: index + 1,
-            total: 120,
-            ram:
-              ((index + 1) * first.bitmap.width * first.bitmap.height * 4) /
-              1048576,
-          });
-      });
+      const variant =
+        demoSequences.find((item) => item.id === id)?.code.length ?? 0;
+      const result = await generateDemo(
+        controller.signal,
+        (first, index) => {
+          if (index === 0 && !currentFrames.current.length) {
+            demoPartial.current = true;
+            currentFrames.current = [first];
+            setFrames(currentFrames.current);
+          }
+          if (index % 8 === 0)
+            setJob({
+              mode: "demo",
+              done: index + 1,
+              total: 120,
+              ram:
+                ((index + 1) * first.bitmap.width * first.bitmap.height * 4) /
+                1048576,
+            });
+        },
+        variant,
+      );
       if (demoPartial.current) {
         currentFrames.current = [];
         demoPartial.current = false;
       }
       replaceFrames(result);
-      setSource("Precision Core");
-      setBeats(cloneDemoBeats());
-      setSelection("origin");
+      setDemoId(id);
+      setSource(
+        demoSequences.find((item) => item.id === id)?.name ?? "Precision Core",
+      );
+      setBeats(beatsForDemo(id));
+      setSelection(beatsForDemo(id)[0]?.id ?? "origin");
       setDialog(null);
     } catch (reason) {
       if (demoPartial.current) {
@@ -328,6 +343,20 @@ export default function App() {
         <div className="work-head">
           <div>
             <h1>Sequence editor</h1>
+            <label className="demo-picker">
+              DEMO
+              <select
+                value={demoId}
+                disabled={!!job}
+                onChange={(e) => void loadDemo(e.target.value)}
+              >
+                {demoSequences.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.name}
+                  </option>
+                ))}
+              </select>
+            </label>
           </div>
           <div className="source-tag">
             <span className="status-dot" />
@@ -767,7 +796,7 @@ export default function App() {
                 disabled={!!job}
                 onClick={() => void loadDemo()}
               >
-                Load demo
+                {demoSequences.length} demos
               </button>
               {job?.mode === "video" ? (
                 <button

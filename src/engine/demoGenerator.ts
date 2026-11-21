@@ -47,6 +47,60 @@ export const demoBeats: Beat[] = [
 ];
 export const cloneDemoBeats = () => structuredClone(demoBeats);
 
+const demoCopy = [
+  [
+    "A precision instrument.",
+    "Quiet geometry, balanced in motion.",
+    "01 / OBJECT STUDY",
+    "Materials reveal their character.",
+  ],
+  [
+    "Time finds its orbit.",
+    "A mechanical study of light and shadow.",
+    "01 / ORBITAL CHRONOGRAPH",
+    "Every second, considered.",
+  ],
+  [
+    "Sound takes shape.",
+    "An acoustic object tuned for the room.",
+    "01 / SONIC FORM",
+    "Nothing between you and the music.",
+  ],
+  [
+    "Keep the light moving.",
+    "A compact optical system made for discovery.",
+    "01 / PRISM CAMERA",
+    "Every detail held in focus.",
+  ],
+  [
+    "Built around the flow.",
+    "A turbine engineered for the next horizon.",
+    "01 / AEROSPACE ENGINEERING",
+    "Performance in every rotation.",
+  ],
+];
+export const demoSequences = demoCopy.map((copy, index) => ({
+  id: ["precision", "orbit", "sonic", "prism", "aero"][index],
+  name: [
+    "Precision Core",
+    "Orbit Chronograph",
+    "Sonic Form",
+    "Prism Camera",
+    "Aero Engine",
+  ][index],
+  code: ["SF–01", "OR–02", "AU–03", "PX–04", "AE–05"][index],
+  beats: demoBeats.map((beat, i) => ({
+    ...beat,
+    eyebrow: i === 0 ? copy[2] : beat.eyebrow,
+    headline: i === 0 ? copy[0] : i === 3 ? copy[1] : beat.headline,
+    subtitle: i === 0 ? copy[3] : i === 3 ? copy[1] : beat.subtitle,
+  })),
+}));
+export const beatsForDemo = (id: string) =>
+  structuredClone(
+    demoSequences.find((item) => item.id === id)?.beats ?? demoBeats,
+  );
+
 const width = 960,
   height = 540;
 type Point = [number, number];
@@ -60,7 +114,11 @@ const layers = [
   { radius: 83, hole: 58, depth: 12, z: 61 },
 ];
 
-export function drawDemo(ctx: CanvasRenderingContext2D, t: number) {
+export function drawDemo(
+  ctx: CanvasRenderingContext2D,
+  t: number,
+  variant = 0,
+) {
   const background = ctx.createRadialGradient(650, 235, 25, 640, 260, 580);
   background.addColorStop(0, "#30313a");
   background.addColorStop(0.55, "#12131a");
@@ -86,8 +144,8 @@ export function drawDemo(ctx: CanvasRenderingContext2D, t: number) {
   ctx.fillStyle = sweep;
   ctx.fillRect(0, 0, width, height);
   const spread = Math.pow(Math.sin(t * Math.PI), 3);
-  const yaw = -0.48 + Math.sin(t * tau) * 0.45 - spread * 0.33;
-  const tilt = -0.28 + Math.sin(t * tau + 0.3) * 0.19;
+  const yaw = -0.48 + Math.sin(t * tau) * 0.45 - spread * 0.33 + variant * 0.17;
+  const tilt = -0.28 + Math.sin(t * tau + 0.3 + variant) * 0.19;
   const cosY = Math.cos(yaw),
     sinY = Math.sin(yaw),
     cosX = Math.cos(tilt),
@@ -198,6 +256,7 @@ export function drawDemo(ctx: CanvasRenderingContext2D, t: number) {
 export async function generateDemo(
   signal: AbortSignal,
   onFrame: (frame: Frame, index: number) => void,
+  variant = 0,
 ) {
   const canvas = document.createElement("canvas");
   canvas.width = width;
@@ -207,7 +266,7 @@ export async function generateDemo(
   try {
     for (let i = 0; i < 120; i++) {
       signal.throwIfAborted();
-      drawDemo(ctx, i / 119);
+      drawDemo(ctx, i / 119, variant);
       frames.push(await capture(canvas, 0.84));
       onFrame(frames[i], i);
       if (i % 3 === 0)
