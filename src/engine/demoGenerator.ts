@@ -1,4 +1,3 @@
-import { capture, dispose, type Frame } from "./frameExtractor";
 import type { Beat } from "./scrollMath";
 
 export const demoBeats: Beat[] = [
@@ -79,6 +78,13 @@ const demoCopy = [
     "Performance in every rotation.",
   ],
 ];
+const details = [
+  [],
+  ["THE DIAL", "Count every second.", "A rotating hand tracks the outer minute scale.", "THE CASE", "A polished edge.", "The case catches the light as the dial turns."],
+  ["THE DRIVER", "Air in motion.", "The cone flexes around the center cap.", "THE SURROUND", "Made to move.", "The ridged surround supports the diaphragm as it pulses."],
+  ["THE LENS", "Bring it into focus.", "The lens advances through its focus travel.", "THE BODY", "Built around the glass.", "A compact housing keeps the controls within reach."],
+  ["THE FAN", "Eleven blades, one rotor.", "The fan draws air through the inlet.", "THE HUB", "Rotation starts here.", "The hub joins the blades to a single rotating assembly."],
+];
 export const demoSequences = demoCopy.map((copy, index) => ({
   id: ["precision", "orbit", "sonic", "prism", "aero"][index],
   name: [
@@ -91,9 +97,9 @@ export const demoSequences = demoCopy.map((copy, index) => ({
   code: ["SF–01", "OR–02", "AU–03", "PX–04", "AE–05"][index],
   beats: demoBeats.map((beat, i) => ({
     ...beat,
-    eyebrow: i === 0 ? copy[2] : beat.eyebrow,
-    headline: i === 0 ? copy[0] : i === 3 ? copy[1] : beat.headline,
-    subtitle: i === 0 ? copy[3] : i === 3 ? copy[1] : beat.subtitle,
+    eyebrow: i === 0 ? copy[2] : i === 3 ? "04 / FINAL VIEW" : details[index][(i - 1) * 3] ?? beat.eyebrow,
+    headline: i === 0 ? copy[0] : i === 3 ? copy[3] : details[index][(i - 1) * 3 + 1] ?? beat.headline,
+    subtitle: i === 0 || i === 3 ? copy[1] : details[index][(i - 1) * 3 + 2] ?? beat.subtitle,
   })),
 }));
 export const beatsForDemo = (id: string) =>
@@ -119,8 +125,9 @@ export function drawDemo(
   t: number,
   variant = 0,
 ) {
+  const backgrounds = ["#30313a", "#32302b", "#34252b", "#21343a", "#293346"];
   const background = ctx.createRadialGradient(650, 235, 25, 640, 260, 580);
-  background.addColorStop(0, "#30313a");
+  background.addColorStop(0, backgrounds[variant] ?? backgrounds[0]);
   background.addColorStop(0.55, "#12131a");
   background.addColorStop(1, "#08090d");
   ctx.fillStyle = background;
@@ -143,9 +150,18 @@ export function drawDemo(
   sweep.addColorStop(0.63, "#a9b6df00");
   ctx.fillStyle = sweep;
   ctx.fillRect(0, 0, width, height);
+  if (variant === 0) drawCore(ctx, t);
+  else drawHardware(ctx, t, variant);
+  const demo = demoSequences[variant] ?? demoSequences[0];
+  ctx.fillStyle = "#b1bad698";
+  ctx.font = "10px monospace";
+  ctx.fillText(demo.code + "   /   " + demo.name.toUpperCase(), 728, 474);
+}
+
+function drawCore(ctx: CanvasRenderingContext2D, t: number) {
   const spread = Math.pow(Math.sin(t * Math.PI), 3);
-  const yaw = -0.48 + Math.sin(t * tau) * 0.45 - spread * 0.33 + variant * 0.17;
-  const tilt = -0.28 + Math.sin(t * tau + 0.3 + variant) * 0.19;
+  const yaw = -0.48 + Math.sin(t * tau) * 0.45 - spread * 0.33;
+  const tilt = -0.28 + Math.sin(t * tau + 0.3) * 0.19;
   const cosY = Math.cos(yaw),
     sinY = Math.sin(yaw),
     cosX = Math.cos(tilt),
@@ -238,6 +254,25 @@ export function drawDemo(
       );
     }
   });
+  const [x, y] = project(0, 0, 72);
+  const glow = ctx.createRadialGradient(x, y, 0, x, y, 65);
+  glow.addColorStop(0, "#d0ddffc0");
+  glow.addColorStop(0.12, "#738cca80");
+  glow.addColorStop(0.5, "#718cfb16");
+  glow.addColorStop(1, "#718cfb00");
+  ctx.fillStyle = glow;
+  ctx.fillRect(x - 65, y - 65, 130, 130);
+  outline(51, 73, "#a1b9ff61");
+  outline(39, 73, "#b8c9ff33");
+}
+
+function drawHardware(ctx: CanvasRenderingContext2D, t: number, variant: number) {
+  ctx.save();
+  ctx.translate(627, 263);
+  ctx.rotate((variant === 1 ? -0.22 : 0.06) * Math.cos(t * Math.PI));
+  const push = 0.92 + Math.sin(t * Math.PI) * 0.13;
+  ctx.scale(push, push);
+  ctx.translate(-627, -263);
   if (variant === 1) {
     const cx = 627, cy = 263, radius = 104;
     const caseMetal = ctx.createRadialGradient(cx - 35, cy - 44, 8, cx, cy, 150);
@@ -245,6 +280,15 @@ export function drawDemo(
     caseMetal.addColorStop(0.38, "#292c34");
     caseMetal.addColorStop(0.72, "#111319");
     caseMetal.addColorStop(1, "#777d89");
+    for (let y = cy - 194; y < cy + 190; y += 19) {
+      ctx.beginPath();
+      ctx.roundRect(cx - 71, y, 142, 17, 5);
+      ctx.fillStyle = caseMetal;
+      ctx.fill();
+      ctx.strokeStyle = "#999da855";
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
     ctx.beginPath(); ctx.roundRect(cx - 139, cy - 118, 278, 236, 42); ctx.fillStyle = caseMetal; ctx.fill();
     ctx.strokeStyle = "#d5d9e65b"; ctx.lineWidth = 2; ctx.stroke();
     ctx.beginPath(); ctx.arc(cx, cy, radius, 0, tau); ctx.fillStyle = "#10131a"; ctx.fill();
@@ -263,6 +307,13 @@ export function drawDemo(
     ctx.beginPath(); ctx.arc(cx, cy, 5, 0, tau); ctx.fillStyle = "#9be8cf"; ctx.fill();
   } else if (variant === 2) {
     const cx = 627, cy = 263, radius = 145;
+    ctx.beginPath();
+    ctx.roundRect(cx - 167, cy - 163, 334, 326, 28);
+    ctx.fillStyle = "#27242a";
+    ctx.fill();
+    ctx.strokeStyle = "#a98e8f";
+    ctx.lineWidth = 2;
+    ctx.stroke();
     const cone = ctx.createRadialGradient(cx - 40, cy - 50, 6, cx, cy, radius);
     cone.addColorStop(0, "#242730"); cone.addColorStop(0.28, "#8b8d94"); cone.addColorStop(0.34, "#30333c");
     cone.addColorStop(0.75, "#555a64"); cone.addColorStop(1, "#111319");
@@ -287,14 +338,15 @@ export function drawDemo(
     ctx.strokeStyle = "#d2d7e187"; ctx.lineWidth = 3; ctx.stroke();
     ctx.fillStyle = "#11141a"; ctx.beginPath(); ctx.roundRect(x + 28, y + 19, 44, 15, 4); ctx.fill();
     ctx.fillStyle = "#8fa5c8"; ctx.beginPath(); ctx.arc(x + 309, y + 32, 8, 0, tau); ctx.fill();
-    const lens = ctx.createRadialGradient(590, 235, 5, 627, 263, 93);
+    const focus = 8 * Math.sin(t * Math.PI);
+    const lens = ctx.createRadialGradient(590 + 45 * t, 235, 5, 627, 263, 93 + focus);
     lens.addColorStop(0, "#a7d4ea"); lens.addColorStop(0.11, "#172b3c"); lens.addColorStop(0.34, "#0b111a"); lens.addColorStop(0.72, "#626c7a"); lens.addColorStop(1, "#151920");
-    ctx.beginPath(); ctx.arc(627, 263, 88, 0, tau); ctx.fillStyle = lens; ctx.fill();
+    ctx.beginPath(); ctx.arc(627, 263, 88 + focus, 0, tau); ctx.fillStyle = lens; ctx.fill();
     ctx.strokeStyle = "#dfe5ee"; ctx.lineWidth = 6; ctx.stroke();
     for (let i = 0; i < 5; i++) { ctx.beginPath(); ctx.arc(627, 263, 76 - i * 12, 0, tau); ctx.strokeStyle = i % 2 ? "#747d8b" : "#d5dbe4"; ctx.lineWidth = 2; ctx.stroke(); }
     ctx.beginPath(); ctx.arc(627, 263, 16, 0, tau); ctx.fillStyle = "#88aacf"; ctx.fill();
   } else if (variant >= 4) {
-    const cx = 627, cy = 263, spin = t * tau * 0.18;
+    const cx = 627, cy = 263, spin = (t + t * t) * tau * 1.8;
     ctx.beginPath(); ctx.arc(cx, cy, 149, 0, tau); ctx.fillStyle = "#171a21"; ctx.fill();
     ctx.strokeStyle = "#d8dde7"; ctx.lineWidth = 9; ctx.stroke();
     ctx.beginPath(); ctx.arc(cx, cy, 130, 0, tau); ctx.strokeStyle = "#555c68"; ctx.lineWidth = 2; ctx.stroke();
@@ -311,44 +363,5 @@ export function drawDemo(
     ctx.beginPath(); ctx.arc(cx, cy, 31, 0, tau); ctx.fillStyle = hub; ctx.fill();
     ctx.strokeStyle = "#e6e9ef"; ctx.lineWidth = 3; ctx.stroke();
   }
-  const [x, y] = project(0, 0, 72);
-  const glow = ctx.createRadialGradient(x, y, 0, x, y, 65);
-  glow.addColorStop(0, "#d0ddffc0");
-  glow.addColorStop(0.12, "#738cca80");
-  glow.addColorStop(0.5, "#718cfb16");
-  glow.addColorStop(1, "#718cfb00");
-  ctx.fillStyle = glow;
-  ctx.fillRect(x - 65, y - 65, 130, 130);
-  outline(51, 73, "#a1b9ff61");
-  outline(39, 73, "#b8c9ff33");
-  ctx.fillStyle = "#b1bad698";
-  ctx.font = "10px monospace";
-  ctx.fillText(demoSequences[variant]?.code + "   /   " + (demoSequences[variant]?.name.toUpperCase() ?? "CORE ASSEMBLY"), 728, 474);
-  ctx.fillText("OPTICAL AXIS   +Z", 728, 493);
-}
-export async function generateDemo(
-  signal: AbortSignal,
-  onFrame: (frame: Frame, index: number) => void,
-  variant = 0,
-) {
-  const canvas = document.createElement("canvas");
-  canvas.width = width;
-  canvas.height = height;
-  const ctx = canvas.getContext("2d")!;
-  const frames: Frame[] = [];
-  try {
-    for (let i = 0; i < 120; i++) {
-      signal.throwIfAborted();
-      drawDemo(ctx, i / 119, variant);
-      frames.push(await capture(canvas, 0.84));
-      onFrame(frames[i], i);
-      if (i % 3 === 0)
-        await new Promise<void>((resolve) => setTimeout(resolve, 0));
-    }
-    signal.throwIfAborted();
-    return frames;
-  } catch (error) {
-    dispose(frames);
-    throw error;
-  }
+  ctx.restore();
 }

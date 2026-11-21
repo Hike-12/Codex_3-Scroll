@@ -76,16 +76,16 @@ function waitFor(
   });
 }
 export async function extractFrames(
-  file: File,
+  file: File | string,
   options: ExtractionOptions,
-  onFrame: (count: number, ram: number) => void,
+  onFrame: (count: number, ram: number, frame: Frame) => void,
   signal: AbortSignal,
 ) {
   const video = document.createElement("video");
   video.preload = "auto";
   video.muted = true;
   video.playsInline = true;
-  const source = URL.createObjectURL(file);
+  const source = typeof file === "string" ? file : URL.createObjectURL(file);
   const frames: Frame[] = [];
   try {
     await waitFor(video, "loadeddata", signal, () => {
@@ -126,10 +126,12 @@ export async function extractFrames(
         });
       }
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      frames.push(await capture(canvas, options.quality));
+      const frame = await capture(canvas, options.quality);
+      frames.push(frame);
       onFrame(
         frames.length,
         (frames.length * canvas.width * canvas.height * 4) / 1048576,
+        frame,
       );
     }
     signal.throwIfAborted();
@@ -140,6 +142,6 @@ export async function extractFrames(
   } finally {
     video.removeAttribute("src");
     video.load();
-    URL.revokeObjectURL(source);
+    if (typeof file !== "string") URL.revokeObjectURL(source);
   }
 }

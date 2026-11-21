@@ -4,6 +4,8 @@ import {
   ArrowDownToLine,
   ArrowUpRight,
   Braces,
+  Check,
+  ChevronDown,
   ChevronRight,
   Clapperboard,
   CloudUpload,
@@ -21,7 +23,7 @@ import {
   beatsForDemo,
   cloneDemoBeats,
   demoSequences,
-  generateDemo,
+
 } from "./engine/demoGenerator";
 import {
   dispose,
@@ -57,6 +59,8 @@ export default function App() {
   const [dialog, setDialog] = useState<"source" | "export" | null>(null);
   const [source, setSource] = useState("Precision Core");
   const [demoId, setDemoId] = useState("precision");
+  const [demoMenuOpen, setDemoMenuOpen] = useState(false);
+  const demoTrigger = useRef<HTMLButtonElement>(null);
   const [file, setFile] = useState<File | null>(null);
   const [count, setCount] = useState(120);
   const [width, setWidth] = useState(1280);
@@ -89,29 +93,19 @@ export default function App() {
     setFrame(0);
     setJob({ mode: "demo", done: 0, total: 120, ram: 0 });
     try {
-      const variant = Math.max(
-        0,
-        demoSequences.findIndex((item) => item.id === id),
-      );
-      const result = await generateDemo(
-        controller.signal,
-        (first, index) => {
-          if (index === 0 && !currentFrames.current.length) {
+      const result = await extractFrames(
+        import.meta.env.BASE_URL + "demos/" + id + ".mp4",
+        { count: 120, width: 960, quality: 0.84 },
+        (done, ram, first) => {
+          if (done === 1 && !currentFrames.current.length) {
             demoPartial.current = true;
             currentFrames.current = [first];
             setFrames(currentFrames.current);
           }
-          if (index % 8 === 0)
-            setJob({
-              mode: "demo",
-              done: index + 1,
-              total: 120,
-              ram:
-                ((index + 1) * first.bitmap.width * first.bitmap.height * 4) /
-                1048576,
-            });
+          if (done === 1 || done % 8 === 0)
+            setJob({ mode: "demo", done, total: 120, ram });
         },
-        variant,
+        controller.signal,
       );
       if (demoPartial.current) {
         currentFrames.current = [];
@@ -135,7 +129,7 @@ export default function App() {
         setError(
           reason instanceof Error
             ? reason.message
-            : "Could not render the demo.",
+            : "Could not load the demo video.",
         );
     } finally {
       if (task.current === controller) setJob(null);
@@ -345,20 +339,55 @@ export default function App() {
         <div className="work-head">
           <div>
             <h1>Sequence editor</h1>
-            <label className="demo-picker">
-              DEMO
-              <select
-                value={demoId}
+            <div
+              className="demo-picker"
+              onBlur={(event) => {
+                if (!event.currentTarget.contains(event.relatedTarget)) setDemoMenuOpen(false);
+              }}
+              onKeyDown={(event) => {
+                if (event.key === "Escape" && demoMenuOpen) {
+                  event.stopPropagation();
+                  setDemoMenuOpen(false);
+                  demoTrigger.current?.focus();
+                }
+              }}
+            >
+              <button
+                ref={demoTrigger}
+                className="demo-trigger"
+                type="button"
+                aria-label="Choose demo video"
+                aria-expanded={demoMenuOpen}
+                aria-controls="demo-options"
                 disabled={!!job}
-                onChange={(e) => void loadDemo(e.target.value)}
+                onClick={() => setDemoMenuOpen((open) => !open)}
               >
-                {demoSequences.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.name}
-                  </option>
-                ))}
-              </select>
-            </label>
+                <Film size={14} aria-hidden="true" />
+                <span>{demoSequences.find((demo) => demo.id === demoId && demo.name === source)?.name ?? "Choose demo"}</span>
+                <ChevronDown size={14} aria-hidden="true" />
+              </button>
+              <ul id="demo-options" className="demo-options" hidden={!demoMenuOpen}>
+                {demoSequences.map((item) => {
+                  const active = item.id === demoId && source === item.name;
+                  return (
+                    <li key={item.id}>
+                      <button
+                        type="button"
+                        aria-current={active ? "true" : undefined}
+                        onClick={() => {
+                          setDemoMenuOpen(false);
+                          demoTrigger.current?.focus();
+                          if (!active) void loadDemo(item.id);
+                        }}
+                      >
+                        {item.name}
+                        {active && <Check size={14} aria-hidden="true" />}
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
           </div>
           <div className="source-tag">
             <span className="status-dot" />
@@ -692,7 +721,7 @@ export default function App() {
       />
       {job?.mode === "demo" && (
         <div className="toast" role="status">
-          Rendering demo · {job.done} / {job.total}
+          Loading demo · {job.done} / {job.total}
         </div>
       )}
       {!dialog && error && (
