@@ -238,6 +238,79 @@ export function drawDemo(
       );
     }
   });
+  if (variant === 1) {
+    const cx = 627, cy = 263, radius = 104;
+    const caseMetal = ctx.createRadialGradient(cx - 35, cy - 44, 8, cx, cy, 150);
+    caseMetal.addColorStop(0, "#8b909b");
+    caseMetal.addColorStop(0.38, "#292c34");
+    caseMetal.addColorStop(0.72, "#111319");
+    caseMetal.addColorStop(1, "#777d89");
+    ctx.beginPath(); ctx.roundRect(cx - 139, cy - 118, 278, 236, 42); ctx.fillStyle = caseMetal; ctx.fill();
+    ctx.strokeStyle = "#d5d9e65b"; ctx.lineWidth = 2; ctx.stroke();
+    ctx.beginPath(); ctx.arc(cx, cy, radius, 0, tau); ctx.fillStyle = "#10131a"; ctx.fill();
+    ctx.strokeStyle = "#d9dce4"; ctx.lineWidth = 4; ctx.stroke();
+    for (let i = 0; i < 60; i++) {
+      const angle = i / 60 * tau - Math.PI / 2;
+      const outer = radius - 8, inner = radius - (i % 5 === 0 ? 21 : 14);
+      ctx.beginPath(); ctx.moveTo(cx + Math.cos(angle) * inner, cy + Math.sin(angle) * inner);
+      ctx.lineTo(cx + Math.cos(angle) * outer, cy + Math.sin(angle) * outer);
+      ctx.strokeStyle = i % 5 === 0 ? "#e8eaf1" : "#777e8c"; ctx.lineWidth = i % 5 === 0 ? 2 : 1; ctx.stroke();
+    }
+    const hand = t * tau;
+    ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + Math.cos(hand - Math.PI / 2) * 66, cy + Math.sin(hand - Math.PI / 2) * 66);
+    ctx.moveTo(cx, cy); ctx.lineTo(cx + Math.cos(hand * 0.083 - Math.PI / 2) * 48, cy + Math.sin(hand * 0.083 - Math.PI / 2) * 48);
+    ctx.strokeStyle = "#e3eee9"; ctx.lineWidth = 3; ctx.stroke();
+    ctx.beginPath(); ctx.arc(cx, cy, 5, 0, tau); ctx.fillStyle = "#9be8cf"; ctx.fill();
+  } else if (variant === 2) {
+    const cx = 627, cy = 263, radius = 145;
+    const cone = ctx.createRadialGradient(cx - 40, cy - 50, 6, cx, cy, radius);
+    cone.addColorStop(0, "#242730"); cone.addColorStop(0.28, "#8b8d94"); cone.addColorStop(0.34, "#30333c");
+    cone.addColorStop(0.75, "#555a64"); cone.addColorStop(1, "#111319");
+    ctx.beginPath(); ctx.arc(cx, cy, radius, 0, tau); ctx.fillStyle = cone; ctx.fill();
+    ctx.strokeStyle = "#dfe2ebc0"; ctx.lineWidth = 4; ctx.stroke();
+    for (let ring = 0; ring < 5; ring++) {
+      ctx.beginPath(); ctx.arc(cx, cy, 116 - ring * 13 + Math.sin(t * tau + ring) * 2, 0, tau);
+      ctx.strokeStyle = ring % 2 ? "#13161d99" : "#e5e8ef74"; ctx.lineWidth = 2; ctx.stroke();
+    }
+    for (let i = 0; i < 10; i++) {
+      const a = i / 10 * tau;
+      ctx.beginPath(); ctx.arc(cx + Math.cos(a) * 129, cy + Math.sin(a) * 129, 3.5, 0, tau);
+      ctx.fillStyle = "#d8dbe3"; ctx.fill();
+    }
+    ctx.beginPath(); ctx.arc(cx, cy, 32 + Math.sin(t * tau) * 3, 0, tau); ctx.fillStyle = "#11141b"; ctx.fill();
+    ctx.strokeStyle = "#c7ccd8"; ctx.lineWidth = 3; ctx.stroke();
+  } else if (variant === 3) {
+    const x = 437, y = 192, w = 380, h = 148;
+    const body = ctx.createLinearGradient(x, y, x + w, y + h);
+    body.addColorStop(0, "#7f858e"); body.addColorStop(0.22, "#3c414a"); body.addColorStop(0.7, "#191c23"); body.addColorStop(1, "#696e78");
+    ctx.beginPath(); ctx.roundRect(x, y, w, h, 24); ctx.fillStyle = body; ctx.fill();
+    ctx.strokeStyle = "#d2d7e187"; ctx.lineWidth = 3; ctx.stroke();
+    ctx.fillStyle = "#11141a"; ctx.beginPath(); ctx.roundRect(x + 28, y + 19, 44, 15, 4); ctx.fill();
+    ctx.fillStyle = "#8fa5c8"; ctx.beginPath(); ctx.arc(x + 309, y + 32, 8, 0, tau); ctx.fill();
+    const lens = ctx.createRadialGradient(590, 235, 5, 627, 263, 93);
+    lens.addColorStop(0, "#a7d4ea"); lens.addColorStop(0.11, "#172b3c"); lens.addColorStop(0.34, "#0b111a"); lens.addColorStop(0.72, "#626c7a"); lens.addColorStop(1, "#151920");
+    ctx.beginPath(); ctx.arc(627, 263, 88, 0, tau); ctx.fillStyle = lens; ctx.fill();
+    ctx.strokeStyle = "#dfe5ee"; ctx.lineWidth = 6; ctx.stroke();
+    for (let i = 0; i < 5; i++) { ctx.beginPath(); ctx.arc(627, 263, 76 - i * 12, 0, tau); ctx.strokeStyle = i % 2 ? "#747d8b" : "#d5dbe4"; ctx.lineWidth = 2; ctx.stroke(); }
+    ctx.beginPath(); ctx.arc(627, 263, 16, 0, tau); ctx.fillStyle = "#88aacf"; ctx.fill();
+  } else if (variant >= 4) {
+    const cx = 627, cy = 263, spin = t * tau * 0.18;
+    ctx.beginPath(); ctx.arc(cx, cy, 149, 0, tau); ctx.fillStyle = "#171a21"; ctx.fill();
+    ctx.strokeStyle = "#d8dde7"; ctx.lineWidth = 9; ctx.stroke();
+    ctx.beginPath(); ctx.arc(cx, cy, 130, 0, tau); ctx.strokeStyle = "#555c68"; ctx.lineWidth = 2; ctx.stroke();
+    for (let i = 0; i < 11; i++) {
+      ctx.save(); ctx.translate(cx, cy); ctx.rotate(spin + i / 11 * tau);
+      ctx.beginPath(); ctx.moveTo(22, -12); ctx.bezierCurveTo(65, -48, 125, -32, 131, -10);
+      ctx.bezierCurveTo(98, 6, 57, 19, 22, 12); ctx.closePath();
+      const blade = ctx.createLinearGradient(20, 0, 132, 0);
+      blade.addColorStop(0, "#242832"); blade.addColorStop(0.72, "#b7bdc8"); blade.addColorStop(1, "#454a55");
+      ctx.fillStyle = blade; ctx.fill(); ctx.strokeStyle = "#e6e8ee5c"; ctx.lineWidth = 1; ctx.stroke(); ctx.restore();
+    }
+    const hub = ctx.createRadialGradient(cx - 8, cy - 9, 2, cx, cy, 31);
+    hub.addColorStop(0, "#e1e5eb"); hub.addColorStop(0.58, "#858c98"); hub.addColorStop(1, "#262a32");
+    ctx.beginPath(); ctx.arc(cx, cy, 31, 0, tau); ctx.fillStyle = hub; ctx.fill();
+    ctx.strokeStyle = "#e6e9ef"; ctx.lineWidth = 3; ctx.stroke();
+  }
   const [x, y] = project(0, 0, 72);
   const glow = ctx.createRadialGradient(x, y, 0, x, y, 65);
   glow.addColorStop(0, "#d0ddffc0");
@@ -250,7 +323,7 @@ export function drawDemo(
   outline(39, 73, "#b8c9ff33");
   ctx.fillStyle = "#b1bad698";
   ctx.font = "10px monospace";
-  ctx.fillText("SF–01   /   CORE ASSEMBLY", 728, 474);
+  ctx.fillText(demoSequences[variant]?.code + "   /   " + (demoSequences[variant]?.name.toUpperCase() ?? "CORE ASSEMBLY"), 728, 474);
   ctx.fillText("OPTICAL AXIS   +Z", 728, 493);
 }
 export async function generateDemo(

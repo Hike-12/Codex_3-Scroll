@@ -89,8 +89,10 @@ export default function App() {
     setFrame(0);
     setJob({ mode: "demo", done: 0, total: 120, ram: 0 });
     try {
-      const variant =
-        demoSequences.find((item) => item.id === id)?.code.length ?? 0;
+      const variant = Math.max(
+        0,
+        demoSequences.findIndex((item) => item.id === id),
+      );
       const result = await generateDemo(
         controller.signal,
         (first, index) => {
