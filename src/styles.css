@@ -21,6 +21,36 @@ body {
   height: 100dvh;
   overflow: hidden;
 }
+html.preview-mode {
+  min-height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-color: #625d70 #0b0b0e;
+  scrollbar-width: thin;
+}
+body.preview-mode {
+  height: auto;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+body.preview-mode #root {
+  min-height: 100dvh;
+}
+html.preview-mode::-webkit-scrollbar,
+body.preview-mode::-webkit-scrollbar {
+  width: 10px;
+}
+html.preview-mode::-webkit-scrollbar-track,
+body.preview-mode::-webkit-scrollbar-track {
+  background: #0b0b0e;
+}
+html.preview-mode::-webkit-scrollbar-thumb,
+body.preview-mode::-webkit-scrollbar-thumb {
+  background: #393642;
+  border: 3px solid #0b0b0e;
+  border-radius: 99px;
+}
 button,
 input,
 textarea,

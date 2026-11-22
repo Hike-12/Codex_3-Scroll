@@ -165,6 +165,8 @@ export default function App() {
   }, [dialog]);
   useEffect(() => {
     if (!preview) return;
+    document.documentElement.classList.add("preview-mode");
+    document.body.classList.add("preview-mode");
     window.scrollTo(0, 0);
     const exit = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
@@ -173,7 +175,11 @@ export default function App() {
       }
     };
     window.addEventListener("keydown", exit);
-    return () => window.removeEventListener("keydown", exit);
+    return () => {
+      window.removeEventListener("keydown", exit);
+      document.documentElement.classList.remove("preview-mode");
+      document.body.classList.remove("preview-mode");
+    };
   }, [preview]);
   useEffect(() => {
     if (!notice) return;
