@@ -20,7 +20,6 @@ export const demoBeats: Beat[] = [
     subtitle: "Concentric titanium rings control the path of light.",
     position: "Bottom-Left",
     animation: "Blur Reveal",
-    pin: { x: 68, y: 42 },
   },
   {
     id: "assembly",
@@ -31,7 +30,6 @@ export const demoBeats: Beat[] = [
     subtitle: "An exploded view reveals the architecture beneath the surface.",
     position: "Left",
     animation: "Slide Horizontal",
-    pin: { x: 70, y: 56 },
   },
   {
     id: "finish",
