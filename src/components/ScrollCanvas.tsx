@@ -112,13 +112,16 @@ export default function ScrollCanvas({
   onExit?: () => void;
 }) {
   const canvas = useRef<HTMLCanvasElement>(null);
-  const section = useRef<HTMLElement>(null);
+  const scrollport = useRef<HTMLElement>(null);
   const [readout, setReadout] = useState({ frame: 0, progress: 0, fps: 0 });
   const current = useRef(0);
   useEffect(() => {
+    if (live) scrollport.current?.focus({ preventScroll: true });
+  }, [live]);
+  useEffect(() => {
     if (!frames.length) return;
     const node = canvas.current!,
-      root = section.current!;
+      root = scrollport.current;
     let raf = 0,
       prev = performance.now(),
       sample = prev,
@@ -132,10 +135,10 @@ export default function ScrollCanvas({
       lastFps = -1;
     const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
     const tick = (now: number) => {
-      const progress = live
+      const progress = root
         ? scrollProgress(
-            -root.getBoundingClientRect().top,
-            root.offsetHeight - node.clientHeight,
+            root.scrollTop,
+            root.scrollHeight - root.clientHeight,
           )
         : clamp(frame / Math.max(1, frames.length - 1));
       const target = progress * (frames.length - 1);
@@ -183,33 +186,43 @@ export default function ScrollCanvas({
     return () => cancelAnimationFrame(raf);
   }, [frames, frame, live, motion.damping, motion.fit]);
   const active = live ? readout.frame : frame;
-  return (
-    <section ref={section} className={live ? "scroll-page" : "editor-canvas"}>
-      <div className={live ? "sticky-stage" : "canvas-stage"}>
-        <canvas ref={canvas} aria-label="Scroll sequence frame" />
-        <div className="canvas-shade" />
-        <StoryOverlay beats={beats} frame={active} count={frames.length} />
-        {live && (
-          <>
-            <header className="landing-nav">
-              <strong>SCROLL FORGE</strong>
-              <span>{String(readout.progress).padStart(2, "0")}%</span>
-            </header>
-            <footer className="landing-footer">
-              Scroll to explore <span>↓</span>
-            </footer>
-            <button className="exit-preview" onClick={onExit}>
-              Exit preview <kbd>Esc</kbd>
-            </button>
-          </>
-        )}
-        {live && motion.telemetry && (
-          <div className="live-telemetry">
-            {readout.fps} FPS / {active + 1} of {frames.length} /{" "}
-            {readout.progress}% / {ramMB(frames).toFixed(0)} MB
-          </div>
-        )}
-      </div>
+  const stage = (
+    <div className={live ? "sticky-stage" : "canvas-stage"}>
+      <canvas ref={canvas} aria-label="Scroll sequence frame" />
+      <div className="canvas-shade" />
+      <StoryOverlay beats={beats} frame={active} count={frames.length} />
+      {live && (
+        <>
+          <header className="landing-nav">
+            <strong>SCROLL FORGE</strong>
+            <span>{String(readout.progress).padStart(2, "0")}%</span>
+          </header>
+          <footer className="landing-footer">
+            Scroll to explore <span>↓</span>
+          </footer>
+          <button className="exit-preview" onClick={onExit}>
+            Exit preview <kbd>Esc</kbd>
+          </button>
+        </>
+      )}
+      {live && motion.telemetry && (
+        <div className="live-telemetry">
+          {readout.fps} FPS / {active + 1} of {frames.length} /{" "}
+          {readout.progress}% / {ramMB(frames).toFixed(0)} MB
+        </div>
+      )}
+    </div>
+  );
+  return live ? (
+    <section
+      ref={scrollport}
+      className="live-preview"
+      aria-label="Live preview"
+      tabIndex={0}
+    >
+      <div className="scroll-page">{stage}</div>
     </section>
+  ) : (
+    <section className="editor-canvas">{stage}</section>
   );
 }

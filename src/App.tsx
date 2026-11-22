@@ -165,21 +165,11 @@ export default function App() {
   }, [dialog]);
   useEffect(() => {
     if (!preview) return;
-    document.documentElement.classList.add("preview-mode");
-    document.body.classList.add("preview-mode");
-    window.scrollTo(0, 0);
     const exit = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setPreview(false);
-        window.scrollTo(0, 0);
-      }
+      if (event.key === "Escape") setPreview(false);
     };
     window.addEventListener("keydown", exit);
-    return () => {
-      window.removeEventListener("keydown", exit);
-      document.documentElement.classList.remove("preview-mode");
-      document.body.classList.remove("preview-mode");
-    };
+    return () => window.removeEventListener("keydown", exit);
   }, [preview]);
   useEffect(() => {
     if (!notice) return;
@@ -282,10 +272,7 @@ export default function App() {
         beats={beats}
         motion={motion}
         live
-        onExit={() => {
-          setPreview(false);
-          window.scrollTo(0, 0);
-        }}
+        onExit={() => setPreview(false)}
       />
     );
 

@@ -21,35 +21,22 @@ body {
   height: 100dvh;
   overflow: hidden;
 }
-html.preview-mode {
-  min-height: 100%;
+.live-preview {
+  position: fixed;
+  inset: 0;
   overflow-y: auto;
   overflow-x: hidden;
-  scrollbar-color: #625d70 #0b0b0e;
-  scrollbar-width: thin;
+  overscroll-behavior: none;
+  scrollbar-width: none;
 }
-body.preview-mode {
-  height: auto;
-  min-height: 100dvh;
-  overflow-x: hidden;
-  overflow-y: auto;
+.live-preview::-webkit-scrollbar {
+  display: none;
 }
-body.preview-mode #root {
-  min-height: 100dvh;
+.live-preview .scroll-page {
+  height: 500%;
 }
-html.preview-mode::-webkit-scrollbar,
-body.preview-mode::-webkit-scrollbar {
-  width: 10px;
-}
-html.preview-mode::-webkit-scrollbar-track,
-body.preview-mode::-webkit-scrollbar-track {
-  background: #0b0b0e;
-}
-html.preview-mode::-webkit-scrollbar-thumb,
-body.preview-mode::-webkit-scrollbar-thumb {
-  background: #393642;
-  border: 3px solid #0b0b0e;
-  border-radius: 99px;
+.live-preview .sticky-stage {
+  height: 20%;
 }
 button,
 input,
