@@ -298,6 +298,29 @@ select:focus-visible {
   border-radius: 9px;
   overflow: hidden;
 }
+.panel.inspector {
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-color: #696375 #121116;
+  scrollbar-width: thin;
+  overscroll-behavior-y: contain;
+}
+.panel.inspector::-webkit-scrollbar {
+  width: 9px;
+}
+.panel.inspector::-webkit-scrollbar-track {
+  background: #121116;
+  border-left: 1px solid #25232c;
+}
+.panel.inspector::-webkit-scrollbar-thumb {
+  min-height: 36px;
+  background: #55515f;
+  border: 2px solid #121116;
+  border-radius: 8px;
+}
+.panel.inspector::-webkit-scrollbar-thumb:hover {
+  background: #8f879e;
+}
 .panel-title {
   height: 45px;
   padding: 0 15px;
